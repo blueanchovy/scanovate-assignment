@@ -3,6 +3,7 @@ import { ChangeEvent, DragEvent, useRef, useState, useEffect } from "react";
 import { PDFDocument } from "pdf-lib";
 import SignatureDialog from "./components/SignatureDialog";
 import PdfViewer from "./components/PdfViewer";
+import DraggableSignature from "./components/DraggableSignature";
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
@@ -12,20 +13,29 @@ export default function Home() {
   const [loading, setLoading] = useState<boolean>(false);
   const [showSignatureDialog, setShowSignatureDialog] = useState<boolean>(false);
   const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [isTablet, setIsTablet] = useState<boolean>(false);
   const [showPdfViewer, setShowPdfViewer] = useState<boolean>(false);
+  const [signatureDataUrl, setSignatureDataUrl] = useState<string>("");
+  const [signaturePosition, setSignaturePosition] = useState({ x: 50, y: 50 });
+  const [isDraggingSignature, setIsDraggingSignature] = useState<boolean>(false);
+  const [showDraggableSignature, setShowDraggableSignature] = useState<boolean>(false);
+  const [pdfCanvases, setPdfCanvases] = useState<HTMLCanvasElement[]>([]);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const pdfContainerRef = useRef<HTMLDivElement | null>(null);
 
-  // Detect mobile device
+  // Detect mobile and tablet devices
   useEffect(() => {
-    const checkMobile = () => {
+    const checkDevice = () => {
+      const width = window.innerWidth;
       setIsMobile(
-        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-        window.innerWidth < 768
+        /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+        width < 768
       );
+      setIsTablet(width >= 768 && width < 1024);
     };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    checkDevice();
+    window.addEventListener('resize', checkDevice);
+    return () => window.removeEventListener('resize', checkDevice);
   }, []);
 
   const checkAndSetFile = (file: File | undefined) => {
@@ -67,6 +77,8 @@ export default function Home() {
     setError("");
     setShowSignatureDialog(false);
     setShowPdfViewer(false);
+    setShowDraggableSignature(false);
+    setSignatureDataUrl("");
     if (inputRef.current) {
       inputRef.current.value = "";
     }
@@ -88,7 +100,22 @@ export default function Home() {
   }
 
   const handleSignature = async (signatureDataUrl: string) => {
-    if (!file) return;
+    // Store signature and show draggable version
+    setSignatureDataUrl(signatureDataUrl);
+    setShowSignatureDialog(false);
+    setShowDraggableSignature(true);
+  }
+
+  const handleApplySignature = async () => {
+    if (!file || !signatureDataUrl) {
+      setError("Missing file or signature data");
+      return;
+    }
+    
+    if (pdfCanvases.length === 0) {
+      setError("PDF not loaded yet. Please wait a moment and try again.");
+      return;
+    }
 
     setLoading(true);
     setError("");
@@ -108,23 +135,100 @@ export default function Home() {
         throw new Error(result.error || "Failed to validate PDF");
       }
 
+      // Determine which page the signature is on
+      const containerRect = pdfContainerRef.current?.getBoundingClientRect();
+      if (!containerRect) {
+        throw new Error("Container not found");
+      }
+
+      // Find which canvas/page the signature is positioned on based on absolute position
+      let targetPageIndex = 0;
+      let targetCanvas = pdfCanvases[0];
+      let found = false;
+      
+      for (let i = 0; i < pdfCanvases.length; i++) {
+        const canvas = pdfCanvases[i];
+        const parent = canvas.parentElement; // The wrapper div with margins
+        if (!parent) continue;
+        
+        const parentRect = parent.getBoundingClientRect();
+        const scrollTop = pdfContainerRef.current?.scrollTop || 0;
+        
+        // Calculate the top position of this page wrapper in the scrollable content
+        const pageTopInContent = parentRect.top - containerRect.top + scrollTop;
+        const pageBottomInContent = pageTopInContent + parentRect.height;
+        
+        // Check if signature Y position falls within this page wrapper
+        if (signaturePosition.y >= pageTopInContent && signaturePosition.y < pageBottomInContent) {
+          targetPageIndex = i;
+          targetCanvas = canvas;
+          found = true;
+          break;
+        }
+      }
+      
+      // If not found in any page, default to last page
+      if (!found) {
+        targetPageIndex = pdfCanvases.length - 1;
+        targetCanvas = pdfCanvases[targetPageIndex];
+      }
+      
+      const canvasRect = targetCanvas.getBoundingClientRect();
+      
       // If API returns OK, add signature to PDF
       const arrayBuffer = await file.arrayBuffer();
       const pdfDoc = await PDFDocument.load(arrayBuffer);
 
-      // Get the last page
+      // Get the target page
       const pages = pdfDoc.getPages();
-      const lastPage = pages[pages.length - 1];
-      const { width } = lastPage.getSize();
+      const targetPage = pages[targetPageIndex];
+      const { width: pageWidth, height: pageHeight } = targetPage.getSize();
 
       // Embed the signature image
       const signatureImage = await pdfDoc.embedPng(signatureDataUrl);
-      const signatureDims = signatureImage.scale(0.3);
+      
+      // Use fixed signature widths in PDF points for consistent sizing
+      // Desktop: 100pt, Tablet: 120pt, Mobile: 150pt
+      const targetWidth = isMobile ? 150 : isTablet ? 120 : 100;
+      
+      // Calculate height maintaining aspect ratio
+      const aspectRatio = signatureImage.height / signatureImage.width;
+      const targetHeight = targetWidth * aspectRatio;
+      
+      const signatureDims = { width: targetWidth, height: targetHeight };
 
-      // Add signature to bottom right of last page
-      lastPage.drawImage(signatureImage, {
-        x: width - signatureDims.width - 50,
-        y: 50,
+      // Calculate position relative to the target canvas
+      // Account for the canvas position within its parent wrapper
+      const scrollTop = pdfContainerRef.current?.scrollTop || 0;
+      const canvasTopAbsolute = canvasRect.top - containerRect.top + scrollTop;
+      
+      const relativeX = signaturePosition.x;
+      const relativeY = signaturePosition.y - canvasTopAbsolute;
+
+      // Convert to PDF coordinates using ratios (coordinate system flip: PDF is bottom-left origin)
+      const xRatio = relativeX / canvasRect.width;
+      const yRatio = relativeY / canvasRect.height;
+      
+      const pdfX = xRatio * pageWidth;
+      const pdfY = pageHeight - (yRatio * pageHeight) - signatureDims.height;
+
+      // Ensure signature is within bounds
+      const finalX = Math.max(0, Math.min(pdfX, pageWidth - signatureDims.width));
+      const finalY = Math.max(0, Math.min(pdfY, pageHeight - signatureDims.height));
+
+      console.log('Applying signature:', {
+        targetPageIndex,
+        pageWidth,
+        pageHeight,
+        signatureDims: { width: signatureDims.width, height: signatureDims.height },
+        position: { x: finalX, y: finalY },
+        targetWidth
+      });
+
+      // Add signature at the dragged position on the correct page
+      targetPage.drawImage(signatureImage, {
+        x: finalX,
+        y: finalY,
         width: signatureDims.width,
         height: signatureDims.height,
       });
@@ -134,11 +238,15 @@ export default function Home() {
       const blob = new Blob([pdfBytes], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
 
+      console.log('PDF saved successfully, size:', pdfBytes.length, 'bytes');
+
       // Clean up old signed URL if exists
       if (signedUrl) URL.revokeObjectURL(signedUrl);
 
+      // Clear canvases before setting new URL to force refresh
+      setPdfCanvases([]);
       setSignedUrl(url);
-      setShowSignatureDialog(false);
+      setShowDraggableSignature(false);
       // Keep PDF viewer open to show signed PDF
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to sign PDF");
@@ -375,17 +483,81 @@ export default function Home() {
             </div>
 
             <div style={{ display: "flex", gap: "8px" }}>
+              {showDraggableSignature && (
+                <>
+                  <button
+                    onClick={() => setShowSignatureDialog(true)}
+                    style={{
+                      padding: "8px 16px",
+                      backgroundColor: "#f5f5f5",
+                      border: "1px solid #ddd",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                      fontWeight: "500",
+                      fontSize: "14px",
+                      color: "#333"
+                    }}
+                  >
+                    Edit Signature
+                  </button>
+                  <button
+                    onClick={handleApplySignature}
+                    disabled={loading}
+                    style={{
+                      padding: "8px 16px",
+                      backgroundColor: loading ? "#ccc" : "#28a745",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: loading ? "not-allowed" : "pointer",
+                      fontWeight: "500",
+                      fontSize: "14px"
+                    }}
+                  >
+                    Apply Signature
+                  </button>
+                </>
+              )}
+              {signedUrl && signatureDataUrl && !showDraggableSignature && (
+                <button
+                  onClick={() => {
+                    // Reset to original PDF and show draggable signature
+                    if (signedUrl) URL.revokeObjectURL(signedUrl);
+                    setSignedUrl("");
+                    // Clear canvases temporarily to force refresh
+                    setPdfCanvases([]);
+                    // Show draggable signature after a brief delay to ensure PDF reloads
+                    setTimeout(() => {
+                      setShowDraggableSignature(true);
+                    }, 100);
+                  }}
+                  style={{
+                    padding: "8px 16px",
+                    backgroundColor: "#ff9800",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    fontWeight: "500",
+                    fontSize: "14px"
+                  }}
+                >
+                  Reposition Signature
+                </button>
+              )}
               <a
                 href={signedUrl || fileUrl}
                 download={signedUrl ? file?.name?.replace('.pdf', '-signed.pdf') : file?.name}
                 style={{
                   padding: "8px 16px",
-                  backgroundColor: "#0070f3",
+                  backgroundColor: isDraggingSignature ? "#ccc" : "#0070f3",
                   color: "white",
                   textDecoration: "none",
                   borderRadius: "4px",
                   fontWeight: "500",
-                  fontSize: "14px"
+                  fontSize: "14px",
+                  pointerEvents: isDraggingSignature ? "none" : "auto",
+                  opacity: isDraggingSignature ? 0.5 : 1
                 }}
               >
                 Download
@@ -421,15 +593,32 @@ export default function Home() {
           )}
 
           {/* PDF Content */}
-          <div style={{
-            flex: 1,
-            overflow: "auto",
-            padding: isMobile ? "10px" : "20px",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "flex-start"
-          }}>
-            <PdfViewer fileUrl={signedUrl || fileUrl} />
+          <div 
+            ref={pdfContainerRef}
+            style={{
+              flex: 1,
+              overflow: isDraggingSignature ? "hidden" : "auto",
+              padding: isMobile ? "10px" : "20px",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "flex-start",
+              position: "relative"
+            }}>
+            <PdfViewer 
+              fileUrl={signedUrl || fileUrl} 
+              onCanvasReady={(canvases) => setPdfCanvases(canvases)}
+            />
+            {showDraggableSignature && signatureDataUrl && (
+              <DraggableSignature
+                signatureDataUrl={signatureDataUrl}
+                containerRef={pdfContainerRef}
+                onPositionChange={(x, y) => setSignaturePosition({ x, y })}
+                onDragStart={() => setIsDraggingSignature(true)}
+                onDragEnd={() => setIsDraggingSignature(false)}
+                isMobile={isMobile}
+                isTablet={isTablet}
+              />
+            )}
           </div>
         </div>
       )}

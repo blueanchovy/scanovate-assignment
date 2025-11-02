@@ -23,12 +23,12 @@ export default function SignatureDialog({ isOpen, onClose, onSign }: SignatureDi
 
     // Set canvas size to match container size dynamically
     const isMobileDevice = window.innerWidth < 768;
-    
+
     // Calculate available width (90vw - padding)
     const dialogWidth = Math.min(window.innerWidth * 0.9, 1000); // max 1000px
     const containerWidth = dialogWidth - 48; // subtract padding (24px * 2)
     const containerHeight = isMobileDevice ? 200 : 300;
-    
+
     canvas.width = containerWidth;
     canvas.height = containerHeight;
     canvas.style.width = containerWidth + 'px';
@@ -58,10 +58,10 @@ export default function SignatureDialog({ isOpen, onClose, onSign }: SignatureDi
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
-    
+
     const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
     const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
-    
+
     const x = (clientX - rect.left) * scaleX;
     const y = (clientY - rect.top) * scaleY;
 
@@ -81,10 +81,10 @@ export default function SignatureDialog({ isOpen, onClose, onSign }: SignatureDi
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
-    
+
     const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
     const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
-    
+
     const x = (clientX - rect.left) * scaleX;
     const y = (clientY - rect.top) * scaleY;
 

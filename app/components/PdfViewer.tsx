@@ -10,15 +10,22 @@ declare global {
 
 interface PdfViewerProps {
   fileUrl: string;
+  onCanvasReady?: (canvases: HTMLCanvasElement[]) => void;
 }
 
-export default function PdfViewer({ fileUrl }: PdfViewerProps) {
+export default function PdfViewer({ fileUrl, onCanvasReady }: PdfViewerProps) {
   const [numPages, setNumPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
   const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
   const [pdfDoc, setPdfDoc] = useState<any>(null);
   const [scriptLoaded, setScriptLoaded] = useState(false);
+  const onCanvasReadyRef = useRef(onCanvasReady);
+  
+  // Keep ref updated
+  useEffect(() => {
+    onCanvasReadyRef.current = onCanvasReady;
+  }, [onCanvasReady]);
 
   // Load PDF.js from CDN
   useEffect(() => {
@@ -62,7 +69,7 @@ export default function PdfViewer({ fileUrl }: PdfViewerProps) {
 
         const loadingTask = window.pdfjsLib.getDocument(fileUrl);
         const pdf = await loadingTask.promise;
-        
+
         setPdfDoc(pdf);
         setNumPages(pdf.numPages);
         setLoading(false);
@@ -83,12 +90,12 @@ export default function PdfViewer({ fileUrl }: PdfViewerProps) {
       for (let pageNum = 1; pageNum <= numPages; pageNum++) {
         const page = await pdfDoc.getPage(pageNum);
         const canvas = canvasRefs.current[pageNum - 1];
-        
+
         if (!canvas) continue;
 
         const viewport = page.getViewport({ scale: 1.5 });
         const context = canvas.getContext('2d');
-        
+
         if (!context) continue;
 
         canvas.height = viewport.height;
@@ -98,6 +105,12 @@ export default function PdfViewer({ fileUrl }: PdfViewerProps) {
           canvasContext: context,
           viewport: viewport,
         }).promise;
+      }
+      
+      // Notify parent that canvases are ready
+      if (onCanvasReadyRef.current) {
+        const validCanvases = canvasRefs.current.filter((c): c is HTMLCanvasElement => c !== null);
+        onCanvasReadyRef.current(validCanvases);
       }
     };
 
