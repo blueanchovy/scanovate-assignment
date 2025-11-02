@@ -36,7 +36,7 @@ export default function SignatureDialog({ isOpen, onClose, onSign }: SignatureDi
 
     //drawing styles
     ctx.strokeStyle = "#000000";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 4;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
 

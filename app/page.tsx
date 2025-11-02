@@ -111,7 +111,7 @@ export default function Home() {
       setError("Missing file or signature data");
       return;
     }
-    
+
     if (pdfCanvases.length === 0) {
       setError("PDF not loaded yet. Please wait a moment and try again.");
       return;
@@ -145,19 +145,19 @@ export default function Home() {
       let targetPageIndex = 0;
       let targetCanvas = pdfCanvases[0];
       let found = false;
-      
+
       for (let i = 0; i < pdfCanvases.length; i++) {
         const canvas = pdfCanvases[i];
         const parent = canvas.parentElement; // The wrapper div with margins
         if (!parent) continue;
-        
+
         const parentRect = parent.getBoundingClientRect();
         const scrollTop = pdfContainerRef.current?.scrollTop || 0;
-        
+
         // Calculate the top position of this page wrapper in the scrollable content
         const pageTopInContent = parentRect.top - containerRect.top + scrollTop;
         const pageBottomInContent = pageTopInContent + parentRect.height;
-        
+
         // Check if signature Y position falls within this page wrapper
         if (signaturePosition.y >= pageTopInContent && signaturePosition.y < pageBottomInContent) {
           targetPageIndex = i;
@@ -166,15 +166,15 @@ export default function Home() {
           break;
         }
       }
-      
+
       // If not found in any page, default to last page
       if (!found) {
         targetPageIndex = pdfCanvases.length - 1;
         targetCanvas = pdfCanvases[targetPageIndex];
       }
-      
+
       const canvasRect = targetCanvas.getBoundingClientRect();
-      
+
       // If API returns OK, add signature to PDF
       const arrayBuffer = await file.arrayBuffer();
       const pdfDoc = await PDFDocument.load(arrayBuffer);
@@ -186,29 +186,29 @@ export default function Home() {
 
       // Embed the signature image
       const signatureImage = await pdfDoc.embedPng(signatureDataUrl);
-      
+
       // Use fixed signature widths in PDF points for consistent sizing
       // Desktop: 100pt, Tablet: 120pt, Mobile: 150pt
       const targetWidth = isMobile ? 150 : isTablet ? 120 : 100;
-      
+
       // Calculate height maintaining aspect ratio
       const aspectRatio = signatureImage.height / signatureImage.width;
       const targetHeight = targetWidth * aspectRatio;
-      
+
       const signatureDims = { width: targetWidth, height: targetHeight };
 
       // Calculate position relative to the target canvas
       // Account for the canvas position within its parent wrapper
       const scrollTop = pdfContainerRef.current?.scrollTop || 0;
       const canvasTopAbsolute = canvasRect.top - containerRect.top + scrollTop;
-      
+
       const relativeX = signaturePosition.x;
       const relativeY = signaturePosition.y - canvasTopAbsolute;
 
       // Convert to PDF coordinates using ratios (coordinate system flip: PDF is bottom-left origin)
       const xRatio = relativeX / canvasRect.width;
       const yRatio = relativeY / canvasRect.height;
-      
+
       const pdfX = xRatio * pageWidth;
       const pdfY = pageHeight - (yRatio * pageHeight) - signatureDims.height;
 
@@ -468,16 +468,17 @@ export default function Home() {
                 fontWeight: "500",
                 display: "flex",
                 alignItems: "center",
-                gap: "8px"
+                gap: "8px",
+                color: "#333"
               }}
             >
               ← Back
             </button>
             <div style={{ flex: 1 }}>
               <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "600" }}>
-                {signedUrl ? "✓ " : ""}{truncateFileName(file?.name || "PDF Document")}
+                {`${truncateFileName(file?.name?.replace(/\.pdf$/, `${signedUrl ? "-signed" : ""}.pdf`) || "document.pdf")}`}
               </h3>
-              <p style={{ margin: "4px 0 0 0", fontSize: "14px", color: "#666" }}>
+              <p style={{ margin: "4px 0 0 0", fontSize: "14px", color: signedUrl ? "#28a745" : "#666" }}>
                 {signedUrl ? "Signed" : "Original"} • {file ? (file.size / 1024).toFixed(1) : "0"} KB
               </p>
             </div>
@@ -485,6 +486,24 @@ export default function Home() {
             {/* Desktop: Show buttons in header */}
             {!isMobile && !isTablet && (
               <div style={{ display: "flex", gap: "8px" }}>
+                {/* Show Add Signature button if no signature exists */}
+                {!signatureDataUrl && !showDraggableSignature && (
+                  <button
+                    onClick={() => setShowSignatureDialog(true)}
+                    style={{
+                      padding: "8px 16px",
+                      backgroundColor: "#0070f3",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                      fontWeight: "500",
+                      fontSize: "14px"
+                    }}
+                  >
+                    Add Signature
+                  </button>
+                )}
                 {showDraggableSignature && (
                   <>
                     <button
@@ -597,7 +616,7 @@ export default function Home() {
           )}
 
           {/* PDF Content */}
-          <div 
+          <div
             ref={pdfContainerRef}
             style={{
               flex: 1,
@@ -609,8 +628,8 @@ export default function Home() {
               alignItems: "flex-start",
               position: "relative"
             }}>
-            <PdfViewer 
-              fileUrl={signedUrl || fileUrl} 
+            <PdfViewer
+              fileUrl={signedUrl || fileUrl}
               onCanvasReady={(canvases) => setPdfCanvases(canvases)}
             />
             {showDraggableSignature && signatureDataUrl && (
@@ -643,6 +662,25 @@ export default function Home() {
               boxShadow: "0 -2px 8px rgba(0,0,0,0.1)",
               zIndex: 1001
             }}>
+              {/* Show Add Signature button if no signature exists */}
+              {!signatureDataUrl && !showDraggableSignature && (
+                <button
+                  onClick={() => setShowSignatureDialog(true)}
+                  style={{
+                    padding: "10px 16px",
+                    backgroundColor: "#0070f3",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    fontWeight: "500",
+                    fontSize: "14px",
+                    flex: isMobile ? "1 1 auto" : "0 1 auto"
+                  }}
+                >
+                  Add Signature
+                </button>
+              )}
               {showDraggableSignature && (
                 <>
                   <button
