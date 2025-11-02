@@ -21,10 +21,18 @@ export default function SignatureDialog({ isOpen, onClose, onSign }: SignatureDi
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Set canvas size based on screen width
+    // Set canvas size to match container size dynamically
     const isMobileDevice = window.innerWidth < 768;
-    canvas.width = isMobileDevice ? Math.min(window.innerWidth - 80, 400) : 500;
-    canvas.height = 200;
+    
+    // Calculate available width (90vw - padding)
+    const dialogWidth = Math.min(window.innerWidth * 0.9, 1000); // max 1000px
+    const containerWidth = dialogWidth - 48; // subtract padding (24px * 2)
+    const containerHeight = isMobileDevice ? 200 : 300;
+    
+    canvas.width = containerWidth;
+    canvas.height = containerHeight;
+    canvas.style.width = containerWidth + 'px';
+    canvas.style.height = containerHeight + 'px';
 
     //drawing styles
     ctx.strokeStyle = "#000000";
@@ -48,8 +56,14 @@ export default function SignatureDialog({ isOpen, onClose, onSign }: SignatureDi
     setHasSignature(true);
 
     const rect = canvas.getBoundingClientRect();
-    const x = "touches" in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
-    const y = "touches" in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+    
+    const x = (clientX - rect.left) * scaleX;
+    const y = (clientY - rect.top) * scaleY;
 
     ctx.beginPath();
     ctx.moveTo(x, y);
@@ -65,8 +79,14 @@ export default function SignatureDialog({ isOpen, onClose, onSign }: SignatureDi
     if (!ctx) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = "touches" in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
-    const y = "touches" in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+    
+    const x = (clientX - rect.left) * scaleX;
+    const y = (clientY - rect.top) * scaleY;
 
     ctx.lineTo(x, y);
     ctx.stroke();
@@ -142,8 +162,8 @@ export default function SignatureDialog({ isOpen, onClose, onSign }: SignatureDi
           padding: 0;
           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
           z-index: 1000;
-          max-width: 90vw;
-          width: 100%;
+          max-width: 1000px;
+          width: 90vw;
         }
 
         @media (max-width: 768px) {
@@ -182,8 +202,6 @@ export default function SignatureDialog({ isOpen, onClose, onSign }: SignatureDi
           display: block;
           cursor: crosshair;
           touch-action: none;
-          max-width: 100%;
-          height: auto;
         }
 
         @media (max-width: 768px) {
