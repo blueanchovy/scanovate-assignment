@@ -150,28 +150,181 @@ export default function Home() {
     <div>
       {!showPdfViewer ? (
         // Upload View
-        <div>
-          <h2 className="page-subheading">Upload a PDF</h2>
-          <div
-            onDrop={onDrop}
-            onDragOver={onDragOver}
-          >
-            <div className="flex-shrink-0">
+        <div style={{
+          minHeight: "100vh",
+          backgroundColor: "#f5f5f5",
+          display: "flex",
+          flexDirection: "column"
+        }}>
+          {/* Header */}
+          <header style={{
+            backgroundColor: "#2d2d2d",
+            padding: "16px 40px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center"
+          }}>
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              color: "white",
+              fontSize: "24px",
+              fontWeight: "bold"
+            }}>
+              <div style={{
+                backgroundColor: "#ff5722",
+                padding: "4px 8px",
+                borderRadius: "4px"
+              }}>
+                📄
+              </div>
+              PDF-Signer
+            </div>
+            <nav style={{
+              display: "flex",
+              gap: "32px",
+              alignItems: "center"
+            }}>
+
+
+
+            </nav>
+          </header>
+
+          {/* Hero Section */}
+          <div style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "40px 20px",
+            textAlign: "center"
+          }}>
+            <h1 style={{
+              fontSize: "48px",
+              fontWeight: "bold",
+              margin: "0 0 16px 0",
+              color: "#2d2d2d"
+            }}>
+              Online PDF Signer
+            </h1>
+            <p style={{
+              fontSize: "16px",
+              color: "#666",
+              margin: "0 0 48px 0",
+              maxWidth: "600px"
+            }}>
+              Sign your PDFs effortlessly from any device.
+            </p>
+
+            {/* Upload Area */}
+            <div
+              onDrop={onDrop}
+              onDragOver={onDragOver}
+              style={{
+                backgroundColor: "white",
+                borderRadius: "8px",
+                padding: "60px 80px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                maxWidth: "600px",
+                width: "100%",
+                cursor: "pointer"
+              }}
+            >
+              {/* PDF Icon */}
+              <div style={{
+                display: "flex",
+                justifyContent: "center",
+                marginBottom: "24px"
+              }}>
+                <div style={{
+                  width: "80px",
+                  height: "100px",
+                  border: "2px solid #333",
+                  borderRadius: "8px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "20px",
+                  fontWeight: "600",
+                  color: "#333",
+                  position: "relative"
+                }}>
+                  <div style={{
+                    position: "absolute",
+                    top: "-2px",
+                    right: "-2px",
+                    width: "20px",
+                    height: "20px",
+                    borderLeft: "2px solid #333",
+                    borderBottom: "2px solid #333",
+                    backgroundColor: "white"
+                  }} />
+                  PDF
+                </div>
+              </div>
+
+              <h2 style={{
+                fontSize: "24px",
+                color: "#ff5722",
+                margin: "0 0 16px 0",
+                fontWeight: "normal"
+              }}>
+                Drop your PDF file
+              </h2>
+
+              <p style={{
+                fontSize: "14px",
+                color: "#666",
+                margin: "0 0 24px 0"
+              }}>
+                or
+              </p>
+
               <input
                 ref={inputRef}
                 type="file"
                 accept="application/pdf"
                 onChange={onFileChange}
                 id="pdf-file"
+                style={{ display: "none" }}
               />
-            </div>
-          </div>
+              <label htmlFor="pdf-file">
+                <button
+                  onClick={() => inputRef.current?.click()}
+                  style={{
+                    padding: "12px 32px",
+                    backgroundColor: "#2d2d2d",
+                    border: "none",
+                    borderRadius: "4px",
+                    color: "white",
+                    cursor: "pointer",
+                    fontWeight: "500",
+                    fontSize: "14px"
+                  }}
+                >
+                  Upload PDF to Sign
+                </button>
+              </label>
 
-          {error && (
-            <div style={{ color: "red", margin: "10px 0" }}>
-              {error}
+
             </div>
-          )}
+
+            {error && (
+              <div style={{
+                marginTop: "20px",
+                padding: "12px 24px",
+                backgroundColor: "#ffebee",
+                color: "#c62828",
+                borderRadius: "4px",
+                fontSize: "14px"
+              }}>
+                {error}
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         // PDF Viewer Dialog
