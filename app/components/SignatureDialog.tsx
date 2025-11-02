@@ -21,8 +21,9 @@ export default function SignatureDialog({ isOpen, onClose, onSign }: SignatureDi
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    //canvas size
-    canvas.width = 500;
+    // Set canvas size based on screen width
+    const isMobileDevice = window.innerWidth < 768;
+    canvas.width = isMobileDevice ? Math.min(window.innerWidth - 80, 400) : 500;
     canvas.height = 200;
 
     //drawing styles
@@ -142,6 +143,15 @@ export default function SignatureDialog({ isOpen, onClose, onSign }: SignatureDi
           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
           z-index: 1000;
           max-width: 90vw;
+          width: 100%;
+        }
+
+        @media (max-width: 768px) {
+          .signature-dialog {
+            max-width: 95vw;
+            max-height: 90vh;
+            overflow-y: auto;
+          }
         }
 
         .signature-dialog::backdrop {
@@ -172,6 +182,32 @@ export default function SignatureDialog({ isOpen, onClose, onSign }: SignatureDi
           display: block;
           cursor: crosshair;
           touch-action: none;
+          max-width: 100%;
+          height: auto;
+        }
+
+        @media (max-width: 768px) {
+          .signature-canvas {
+            width: 100%;
+          }
+          
+          .signature-dialog-content {
+            padding: 16px;
+          }
+          
+          .signature-dialog-content h2 {
+            font-size: 20px;
+          }
+          
+          .signature-dialog-actions {
+            flex-wrap: wrap;
+          }
+          
+          .btn-primary,
+          .btn-secondary {
+            padding: 8px 16px;
+            font-size: 13px;
+          }
         }
 
         .signature-dialog-actions {

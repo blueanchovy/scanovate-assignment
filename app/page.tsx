@@ -1,7 +1,8 @@
 "use client";
-import { ChangeEvent, DragEvent, useRef, useState } from "react";
+import { ChangeEvent, DragEvent, useRef, useState, useEffect } from "react";
 import { PDFDocument } from "pdf-lib";
 import SignatureDialog from "./components/SignatureDialog";
+import PdfViewer from "./components/PdfViewer";
 
 export default function Home() {
   const [file, setFile] = useState<File | null>(null);
@@ -10,7 +11,22 @@ export default function Home() {
   const [signedUrl, setSignedUrl] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [showSignatureDialog, setShowSignatureDialog] = useState<boolean>(false);
+  const [isMobile, setIsMobile] = useState<boolean>(false);
+  const [showPdfViewer, setShowPdfViewer] = useState<boolean>(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+        window.innerWidth < 768
+      );
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const checkAndSetFile = (file: File | undefined) => {
     setError("");
@@ -23,7 +39,8 @@ export default function Home() {
     setFile(file);
     const url = URL.createObjectURL(file);
     setFileUrl(url);
-    // Automatically open signature dialog when PDF is uploaded
+    // Show PDF viewer and open signature dialog
+    setShowPdfViewer(true);
     setShowSignatureDialog(true);
   }
 
@@ -49,11 +66,25 @@ export default function Home() {
     setSignedUrl("");
     setError("");
     setShowSignatureDialog(false);
+    setShowPdfViewer(false);
     if (inputRef.current) {
       inputRef.current.value = "";
     }
     if (fileUrl) URL.revokeObjectURL(fileUrl);
     if (signedUrl) URL.revokeObjectURL(signedUrl);
+  }
+
+  const handleBackToPdfList = () => {
+    setShowPdfViewer(false);
+    removeFile();
+  }
+
+  const truncateFileName = (name: string, maxLength: number = 30) => {
+    if (name.length <= maxLength) return name;
+    const extension = name.slice(name.lastIndexOf('.'));
+    const nameWithoutExt = name.slice(0, name.lastIndexOf('.'));
+    const truncatedName = nameWithoutExt.slice(0, maxLength - extension.length - 3);
+    return `${truncatedName}...${extension}`;
   }
 
   const handleSignature = async (signatureDataUrl: string) => {
@@ -108,6 +139,7 @@ export default function Home() {
 
       setSignedUrl(url);
       setShowSignatureDialog(false);
+      // Keep PDF viewer open to show signed PDF
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to sign PDF");
     } finally {
@@ -116,61 +148,136 @@ export default function Home() {
   }
   return (
     <div>
-      <h2 className="page-subheading">Upload a PDF</h2>
-      <div
-        onDrop={onDrop}
-        onDragOver={onDragOver}
-      >
-        <div className="flex-shrink-0">
-          <input
-            ref={inputRef}
-            type="file"
-            accept="application/pdf"
-            onChange={onFileChange}
-            id="pdf-file"
-          />
-        </div>
-      </div>
-
-      {error && (
-        <div style={{ color: "red", margin: "10px 0" }}>
-          {error}
-        </div>
-      )}
-
-      {file && (
+      {!showPdfViewer ? (
+        // Upload View
         <div>
-          <p>Selected File: {file.name}</p>
-          <div>{(file.size / 1024).toFixed(1)} KB</div>
-          <button onClick={removeFile}>Remove</button>
-        </div>
-      )}
+          <h2 className="page-subheading">Upload a PDF</h2>
+          <div
+            onDrop={onDrop}
+            onDragOver={onDragOver}
+          >
+            <div className="flex-shrink-0">
+              <input
+                ref={inputRef}
+                type="file"
+                accept="application/pdf"
+                onChange={onFileChange}
+                id="pdf-file"
+              />
+            </div>
+          </div>
 
-      {loading && (
-        <div style={{ margin: "10px 0" }}>
-          Signing PDF...
+          {error && (
+            <div style={{ color: "red", margin: "10px 0" }}>
+              {error}
+            </div>
+          )}
         </div>
-      )}
+      ) : (
+        // PDF Viewer Dialog
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "#f5f5f5",
+          zIndex: 999,
+          display: "flex",
+          flexDirection: "column"
+        }}>
+          {/* Header */}
+          <div style={{
+            backgroundColor: "white",
+            padding: "16px 20px",
+            borderBottom: "1px solid #ddd",
+            display: "flex",
+            alignItems: "center",
+            gap: "16px",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+          }}>
+            <button
+              onClick={handleBackToPdfList}
+              style={{
+                padding: "8px 16px",
+                backgroundColor: "#f5f5f5",
+                border: "1px solid #ddd",
+                borderRadius: "4px",
+                cursor: "pointer",
+                fontWeight: "500",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px"
+              }}
+            >
+              ← Back
+            </button>
+            <div style={{ flex: 1 }}>
+              <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "600" }}>
+                {signedUrl ? "✓ " : ""}{truncateFileName(file?.name || "PDF Document")}
+              </h3>
+              <p style={{ margin: "4px 0 0 0", fontSize: "14px", color: "#666" }}>
+                {signedUrl ? "Signed" : "Original"} • {file ? (file.size / 1024).toFixed(1) : "0"} KB
+              </p>
+            </div>
 
-      {signedUrl ? (
-        <div>
-          <h3>Signed PDF</h3>
-          <iframe
-            src={signedUrl}
-            title="Signed PDF Preview"
-            width="100%"
-            height="600px"
-          />
-        </div>
-      ) : fileUrl && (
-        <div>
-          <h3>Original PDF</h3>
-          <iframe
-            src={fileUrl}
-            title="PDF Preview"
-            width="100%"
-            height="600px"
-          />
+            <div style={{ display: "flex", gap: "8px" }}>
+              <a
+                href={signedUrl || fileUrl}
+                download={signedUrl ? file?.name?.replace('.pdf', '-signed.pdf') : file?.name}
+                style={{
+                  padding: "8px 16px",
+                  backgroundColor: "#0070f3",
+                  color: "white",
+                  textDecoration: "none",
+                  borderRadius: "4px",
+                  fontWeight: "500",
+                  fontSize: "14px"
+                }}
+              >
+                Download
+              </a>
+            </div>
+
+          </div>
+
+          {/* Loading State */}
+          {loading && (
+            <div style={{
+              padding: "16px",
+              backgroundColor: "#fff3cd",
+              borderBottom: "1px solid #ffc107",
+              textAlign: "center",
+              fontWeight: "500"
+            }}>
+              Signing PDF...
+            </div>
+          )}
+
+          {/* Error State */}
+          {error && (
+            <div style={{
+              padding: "16px",
+              backgroundColor: "#f8d7da",
+              borderBottom: "1px solid #f5c6cb",
+              color: "#721c24",
+              textAlign: "center"
+            }}>
+              {error}
+            </div>
+          )}
+
+          {/* PDF Content */}
+          <div style={{
+            flex: 1,
+            overflow: "auto",
+            padding: isMobile ? "10px" : "20px",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "flex-start"
+          }}>
+            <PdfViewer fileUrl={signedUrl || fileUrl} />
+          </div>
         </div>
       )}
 
