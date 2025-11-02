@@ -552,14 +552,15 @@ export default function Home() {
                   download={signedUrl ? file?.name?.replace('.pdf', '-signed.pdf') : file?.name}
                   style={{
                     padding: "8px 16px",
-                    backgroundColor: isDraggingSignature ? "#ccc" : "#0070f3",
+                    backgroundColor: (isDraggingSignature || !signedUrl) ? "#ccc" : "#0070f3",
                     color: "white",
                     textDecoration: "none",
                     borderRadius: "4px",
                     fontWeight: "500",
                     fontSize: "14px",
-                    pointerEvents: isDraggingSignature ? "none" : "auto",
-                    opacity: isDraggingSignature ? 0.5 : 1
+                    pointerEvents: (isDraggingSignature || !signedUrl) ? "none" : "auto",
+                    opacity: (isDraggingSignature || !signedUrl) ? 0.5 : 1,
+                    cursor: (isDraggingSignature || !signedUrl) ? "not-allowed" : "pointer"
                   }}
                 >
                   Download
@@ -712,16 +713,17 @@ export default function Home() {
                 download={signedUrl ? file?.name?.replace('.pdf', '-signed.pdf') : file?.name}
                 style={{
                   padding: "10px 16px",
-                  backgroundColor: isDraggingSignature ? "#ccc" : "#0070f3",
+                  backgroundColor: (isDraggingSignature || !signedUrl) ? "#ccc" : "#0070f3",
                   color: "white",
                   textDecoration: "none",
                   borderRadius: "4px",
                   fontWeight: "500",
                   fontSize: "14px",
-                  pointerEvents: isDraggingSignature ? "none" : "auto",
-                  opacity: isDraggingSignature ? 0.5 : 1,
+                  pointerEvents: (isDraggingSignature || !signedUrl) ? "none" : "auto",
+                  opacity: (isDraggingSignature || !signedUrl) ? 0.5 : 1,
                   flex: isMobile ? "1 1 auto" : "0 1 auto",
-                  textAlign: "center"
+                  textAlign: "center",
+                  cursor: (isDraggingSignature || !signedUrl) ? "not-allowed" : "pointer"
                 }}
               >
                 Download
