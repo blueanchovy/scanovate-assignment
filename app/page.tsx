@@ -482,87 +482,90 @@ export default function Home() {
               </p>
             </div>
 
-            <div style={{ display: "flex", gap: "8px" }}>
-              {showDraggableSignature && (
-                <>
+            {/* Desktop: Show buttons in header */}
+            {!isMobile && !isTablet && (
+              <div style={{ display: "flex", gap: "8px" }}>
+                {showDraggableSignature && (
+                  <>
+                    <button
+                      onClick={() => setShowSignatureDialog(true)}
+                      style={{
+                        padding: "8px 16px",
+                        backgroundColor: "#f5f5f5",
+                        border: "1px solid #ddd",
+                        borderRadius: "4px",
+                        cursor: "pointer",
+                        fontWeight: "500",
+                        fontSize: "14px",
+                        color: "#333"
+                      }}
+                    >
+                      Edit Signature
+                    </button>
+                    <button
+                      onClick={handleApplySignature}
+                      disabled={loading}
+                      style={{
+                        padding: "8px 16px",
+                        backgroundColor: loading ? "#ccc" : "#28a745",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "4px",
+                        cursor: loading ? "not-allowed" : "pointer",
+                        fontWeight: "500",
+                        fontSize: "14px"
+                      }}
+                    >
+                      Apply Signature
+                    </button>
+                  </>
+                )}
+                {signedUrl && signatureDataUrl && !showDraggableSignature && (
                   <button
-                    onClick={() => setShowSignatureDialog(true)}
-                    style={{
-                      padding: "8px 16px",
-                      backgroundColor: "#f5f5f5",
-                      border: "1px solid #ddd",
-                      borderRadius: "4px",
-                      cursor: "pointer",
-                      fontWeight: "500",
-                      fontSize: "14px",
-                      color: "#333"
+                    onClick={() => {
+                      // Reset to original PDF and show draggable signature
+                      if (signedUrl) URL.revokeObjectURL(signedUrl);
+                      setSignedUrl("");
+                      // Clear canvases temporarily to force refresh
+                      setPdfCanvases([]);
+                      // Show draggable signature after a brief delay to ensure PDF reloads
+                      setTimeout(() => {
+                        setShowDraggableSignature(true);
+                      }, 100);
                     }}
-                  >
-                    Edit Signature
-                  </button>
-                  <button
-                    onClick={handleApplySignature}
-                    disabled={loading}
                     style={{
                       padding: "8px 16px",
-                      backgroundColor: loading ? "#ccc" : "#28a745",
+                      backgroundColor: "#ff9800",
                       color: "white",
                       border: "none",
                       borderRadius: "4px",
-                      cursor: loading ? "not-allowed" : "pointer",
+                      cursor: "pointer",
                       fontWeight: "500",
                       fontSize: "14px"
                     }}
                   >
-                    Apply Signature
+                    Reposition Signature
                   </button>
-                </>
-              )}
-              {signedUrl && signatureDataUrl && !showDraggableSignature && (
-                <button
-                  onClick={() => {
-                    // Reset to original PDF and show draggable signature
-                    if (signedUrl) URL.revokeObjectURL(signedUrl);
-                    setSignedUrl("");
-                    // Clear canvases temporarily to force refresh
-                    setPdfCanvases([]);
-                    // Show draggable signature after a brief delay to ensure PDF reloads
-                    setTimeout(() => {
-                      setShowDraggableSignature(true);
-                    }, 100);
-                  }}
+                )}
+                <a
+                  href={signedUrl || fileUrl}
+                  download={signedUrl ? file?.name?.replace('.pdf', '-signed.pdf') : file?.name}
                   style={{
                     padding: "8px 16px",
-                    backgroundColor: "#ff9800",
+                    backgroundColor: isDraggingSignature ? "#ccc" : "#0070f3",
                     color: "white",
-                    border: "none",
+                    textDecoration: "none",
                     borderRadius: "4px",
-                    cursor: "pointer",
                     fontWeight: "500",
-                    fontSize: "14px"
+                    fontSize: "14px",
+                    pointerEvents: isDraggingSignature ? "none" : "auto",
+                    opacity: isDraggingSignature ? 0.5 : 1
                   }}
                 >
-                  Reposition Signature
-                </button>
-              )}
-              <a
-                href={signedUrl || fileUrl}
-                download={signedUrl ? file?.name?.replace('.pdf', '-signed.pdf') : file?.name}
-                style={{
-                  padding: "8px 16px",
-                  backgroundColor: isDraggingSignature ? "#ccc" : "#0070f3",
-                  color: "white",
-                  textDecoration: "none",
-                  borderRadius: "4px",
-                  fontWeight: "500",
-                  fontSize: "14px",
-                  pointerEvents: isDraggingSignature ? "none" : "auto",
-                  opacity: isDraggingSignature ? 0.5 : 1
-                }}
-              >
-                Download
-              </a>
-            </div>
+                  Download
+                </a>
+              </div>
+            )}
 
           </div>
 
@@ -599,6 +602,7 @@ export default function Home() {
               flex: 1,
               overflow: isDraggingSignature ? "hidden" : "auto",
               padding: isMobile ? "10px" : "20px",
+              paddingBottom: (isMobile || isTablet) ? "80px" : "20px", // Extra padding for bottom bar
               display: "flex",
               justifyContent: "center",
               alignItems: "flex-start",
@@ -620,6 +624,110 @@ export default function Home() {
               />
             )}
           </div>
+
+          {/* Mobile/Tablet: Bottom Action Bar */}
+          {(isMobile || isTablet) && (
+            <div style={{
+              position: "fixed",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              backgroundColor: "white",
+              borderTop: "1px solid #ddd",
+              padding: "12px 16px",
+              display: "flex",
+              gap: "8px",
+              justifyContent: "center",
+              flexWrap: "wrap",
+              boxShadow: "0 -2px 8px rgba(0,0,0,0.1)",
+              zIndex: 1001
+            }}>
+              {showDraggableSignature && (
+                <>
+                  <button
+                    onClick={() => setShowSignatureDialog(true)}
+                    style={{
+                      padding: "10px 16px",
+                      backgroundColor: "#f5f5f5",
+                      border: "1px solid #ddd",
+                      borderRadius: "4px",
+                      cursor: "pointer",
+                      fontWeight: "500",
+                      fontSize: "14px",
+                      color: "#333",
+                      flex: isMobile ? "1 1 auto" : "0 1 auto"
+                    }}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={handleApplySignature}
+                    disabled={loading}
+                    style={{
+                      padding: "10px 16px",
+                      backgroundColor: loading ? "#ccc" : "#28a745",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: loading ? "not-allowed" : "pointer",
+                      fontWeight: "500",
+                      fontSize: "14px",
+                      flex: isMobile ? "1 1 auto" : "0 1 auto"
+                    }}
+                  >
+                    Apply
+                  </button>
+                </>
+              )}
+              {signedUrl && signatureDataUrl && !showDraggableSignature && (
+                <button
+                  onClick={() => {
+                    // Reset to original PDF and show draggable signature
+                    if (signedUrl) URL.revokeObjectURL(signedUrl);
+                    setSignedUrl("");
+                    // Clear canvases temporarily to force refresh
+                    setPdfCanvases([]);
+                    // Show draggable signature after a brief delay to ensure PDF reloads
+                    setTimeout(() => {
+                      setShowDraggableSignature(true);
+                    }, 100);
+                  }}
+                  style={{
+                    padding: "10px 16px",
+                    backgroundColor: "#ff9800",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    fontWeight: "500",
+                    fontSize: "14px",
+                    flex: isMobile ? "1 1 auto" : "0 1 auto"
+                  }}
+                >
+                  Reposition
+                </button>
+              )}
+              <a
+                href={signedUrl || fileUrl}
+                download={signedUrl ? file?.name?.replace('.pdf', '-signed.pdf') : file?.name}
+                style={{
+                  padding: "10px 16px",
+                  backgroundColor: isDraggingSignature ? "#ccc" : "#0070f3",
+                  color: "white",
+                  textDecoration: "none",
+                  borderRadius: "4px",
+                  fontWeight: "500",
+                  fontSize: "14px",
+                  pointerEvents: isDraggingSignature ? "none" : "auto",
+                  opacity: isDraggingSignature ? 0.5 : 1,
+                  flex: isMobile ? "1 1 auto" : "0 1 auto",
+                  textAlign: "center"
+                }}
+              >
+                Download
+              </a>
+            </div>
+          )}
         </div>
       )}
 
