@@ -475,8 +475,16 @@ export default function Home() {
               ← Back
             </button>
             <div style={{ flex: 1 }}>
-              <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "600" }}>
-                {`${truncateFileName(file?.name?.replace(/\.pdf$/, `${signedUrl ? "-signed" : ""}.pdf`) || "document.pdf")}`}
+              <h3 style={{ 
+                margin: 0, 
+                fontSize: "18px", 
+                fontWeight: "600",
+                wordBreak: "break-word",
+                overflowWrap: "break-word"
+              }}>
+                {isMobile || isTablet 
+                  ? file?.name?.replace(/\.pdf$/, `${signedUrl ? "-signed" : ""}.pdf`) || "document.pdf"
+                  : truncateFileName(file?.name?.replace(/\.pdf$/, `${signedUrl ? "-signed" : ""}.pdf`) || "document.pdf")}
               </h3>
               <p style={{ margin: "4px 0 0 0", fontSize: "14px", color: signedUrl ? "#28a745" : "#666" }}>
                 {signedUrl ? "Signed" : "Original"} • {file ? (file.size / 1024).toFixed(1) : "0"} KB
