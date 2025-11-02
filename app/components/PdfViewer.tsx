@@ -2,9 +2,32 @@
 import { useEffect, useState, useRef } from "react";
 
 // Declare global types for PDF.js loaded from CDN
+interface PDFPageProxy {
+  getViewport: (params: { scale: number }) => {
+    height: number;
+    width: number;
+  };
+  render: (params: {
+    canvasContext: CanvasRenderingContext2D;
+    viewport: { height: number; width: number };
+  }) => { promise: Promise<void> };
+}
+
+interface PDFDocumentProxy {
+  numPages: number;
+  getPage: (pageNumber: number) => Promise<PDFPageProxy>;
+}
+
+interface PDFJSLib {
+  getDocument: (url: string) => { promise: Promise<PDFDocumentProxy> };
+  GlobalWorkerOptions: {
+    workerSrc: string;
+  };
+}
+
 declare global {
   interface Window {
-    pdfjsLib: any;
+    pdfjsLib: PDFJSLib;
   }
 }
 
@@ -18,7 +41,7 @@ export default function PdfViewer({ fileUrl, onCanvasReady }: PdfViewerProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
   const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
-  const [pdfDoc, setPdfDoc] = useState<any>(null);
+  const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null);
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const onCanvasReadyRef = useRef(onCanvasReady);
   
@@ -171,7 +194,9 @@ export default function PdfViewer({ fileUrl, onCanvasReady }: PdfViewerProps) {
           }}
         >
           <canvas
-            ref={(el) => (canvasRefs.current[index] = el)}
+            ref={(el) => {
+              canvasRefs.current[index] = el;
+            }}
             style={{
               maxWidth: "100%",
               height: "auto",

@@ -235,7 +235,7 @@ export default function Home() {
 
       // Save the PDF
       const pdfBytes = await pdfDoc.save();
-      const blob = new Blob([pdfBytes], { type: "application/pdf" });
+      const blob = new Blob([pdfBytes as BlobPart], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
 
       console.log('PDF saved successfully, size:', pdfBytes.length, 'bytes');
